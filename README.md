@@ -1,212 +1,122 @@
-# Brain Tumor Detection & Classification
+# AI-Assisted Liver Disease Classification from Ultrasound Images
 
-An end-to-end deep learning system for automated brain tumor detection and classification using MRI scans. Built using Transfer Learning (ResNet50) with Grad-CAM explainability and deployed via a Streamlit web application.
+An academic research prototype for three-class classification of liver ultrasound images as **Normal**, **Benign**, or **Malignant**. The project compares ImageNet-pretrained ResNet50 and EfficientNet-B0 models, uses Grad-CAM for model-attribution visualization, and provides a Streamlit demonstration interface. It is not a clinical diagnostic device.
 
----
+## Dataset and fixed split
 
-## Project Overview
+The repository uses the included AUL ultrasound liver dataset (735 images):
 
-Brain tumor diagnosis requires expert radiologists to manually examine MRI scans — a process that is time-consuming, expensive, and prone to human error. This project automates tumor detection and classification using deep learning, providing instant predictions with visual explanations to assist clinical decision-making.
+| Class | Label | Images |
+|---|---:|---:|
+| Normal | 0 | 100 |
+| Benign | 1 | 200 |
+| Malignant | 2 | 435 |
 
-**Tumor Classes:**
-- 🔴 Glioma
-- 🟡 Meningioma
-- 🟢 Pituitary Tumor
-- ⚪ No Tumor
+The fixed, stratified split is recorded in `dataset/development_split.json`. Train and validation selections are drawn only from the 588-image development split; the 147-image test set is held out for final evaluation.
 
----
+| Split | Normal | Benign | Malignant | Total |
+|---|---:|---:|---:|---:|
+| Train | 64 | 128 | 278 | 470 |
+| Validation | 16 | 32 | 70 | 118 |
+| Held-out test | 20 | 40 | 87 | 147 |
 
-## Team
+The class order is always `Normal = 0`, `Benign = 1`, and `Malignant = 2`.
 
-| Name | Role |
-|------|------|
-| **Nishit Patel** | Model Building & Training |
-| **Pranav Adhikari** | Model Evaluation & Metrics |
-| **Unique Bhakta Shrestha** | EDA & Visualizations |
-| **Pragun Lal Shrestha** | Data Preprocessing & Augmentation |
+## Methodology
 
-> Grad-CAM explainability and Streamlit deployment are shared across the team.
+Both completed full-frame models use ImageNet-pretrained backbones: ResNet50 and EfficientNet-B0. Inputs are resized to 224 x 224 and normalized with ImageNet statistics. The repository's training augmentation is applied only to training images. Class imbalance is handled with `WeightedRandomSampler`; optimization uses Adam and `ReduceLROnPlateau`. BatchNorm running statistics are frozen, checkpoint selection is based on validation loss, and early stopping uses patience 10.
 
----
+Training and model selection use only the fixed 470-image training subset and 118-image validation subset. The held-out test set is not used during training or selection.
 
-## Project Structure
+## Staged transfer learning
 
-```
-brain_tumor_detection/
-├── dataset/                  # MRI images (not pushed to GitHub)
-│   ├── Train/
-│   │   ├── glioma/
-│   │   ├── meningioma/
-│   │   ├── notumor/
-│   │   └── pituitary/
-│   └── Test/
-│       ├── glioma/
-│       ├── meningioma/
-│       ├── notumor/
-│       └── pituitary/
-├── notebooks/
-│   ├── 01_eda.ipynb               # Exploratory Data Analysis
-│   ├── 02_preprocessing.ipynb     # Preprocessing & Augmentation
-│   ├── 03_model_training.ipynb    # Model Building & Training 
-│   └── 04_evaluation.ipynb        # Evaluation & Grad-CAM
-├── models/
-│   ├── final_model.keras          # Best trained model 
-│   └── class_indices.json         # Class label mapping
-├── app/
-│   └── app.py                     # Streamlit web application
-├── utils/
-│   └── gradcam.py                 # Grad-CAM implementation
-├── .gitignore
-├── requirements.txt
-└── README.md
+Stage 1 trains the classification head with the backbone and BatchNorm frozen, learning rate `1e-3`, 15 epochs, batch size 32, and `WeightedRandomSampler`.
+
+Stage 2 initializes from the corresponding Stage 1 best checkpoint, unfreezes the backbone while retaining frozen BatchNorm, and uses learning rate `1e-6`, a maximum of 30 epochs, batch size 32, `WeightedRandomSampler`, and validation-loss early stopping.
+
+### ResNet50
+
+```powershell
+python train.py --model resnet50 --experiment-name staged_transfer/stage1_head_only --freeze-backbone --freeze-batchnorm --learning-rate 1e-3 --epochs 15 --batch-size 32 --imbalance-strategy sampler
+python train.py --model resnet50 --experiment-name staged_transfer/stage2_finetune --resume-checkpoint models/resnet50/staged_transfer/stage1_head_only/best_model.pt --freeze-batchnorm --learning-rate 1e-6 --epochs 30 --batch-size 32 --imbalance-strategy sampler
 ```
 
----
+### EfficientNet-B0
 
-## Dataset
-
-**Source:** Mendeley Data — Brain Tumor MRI Dataset  
-**Link:** https://data.mendeley.com/datasets/zwr4ntf94j/5  
-**Total Images:** 12,064 MRI scans  
-**Modality:** T1-weighted contrast-enhanced MRI  
-
-| Split | Glioma | Meningioma | No Tumor | Pituitary | Total |
-|-------|--------|------------|----------|-----------|-------|
-| Train | 3,018 | 2,183 | 1,945 | 2,504 | 9,650 |
-| Test | 755 | 626 | 487 | 546 | 2,414 |
-
-> ⚠️ Dataset is not included in this repository due to size. Download from the link above and place in the `dataset/` folder.
-
----
-
-## Tech Stack
-
-| Category | Tools |
-|----------|-------|
-| Language | Python 3.10 |
-| Deep Learning | TensorFlow 2.10.0, Keras |
-| Model | ResNet50 |
-| Explainability | Grad-CAM |
-| Data Processing | NumPy, Pandas, OpenCV, Pillow |
-| Visualization | Matplotlib, Seaborn |
-| Evaluation | Scikit-learn |
-| Deployment | Streamlit |
-
----
-
-## Project Workflow
-
-```
-Data Collection → EDA → Preprocessing & Augmentation → Model Building
-      → Training (2-Phase) → Evaluation → Grad-CAM → Streamlit Deployment
+```powershell
+python train.py --model efficientnet_b0 --experiment-name staged_transfer/stage1_head_only --freeze-backbone --freeze-batchnorm --learning-rate 1e-3 --epochs 15 --batch-size 32 --imbalance-strategy sampler
+python train.py --model efficientnet_b0 --experiment-name staged_transfer/stage2_finetune --resume-checkpoint models/efficientnet_b0/staged_transfer/stage1_head_only/best_model.pt --freeze-batchnorm --learning-rate 1e-6 --epochs 30 --batch-size 32 --imbalance-strategy sampler
 ```
 
-### 1. EDA
-- Class distribution analysis
-- Sample image visualization per class
-- Image dimension analysis
-- Pixel intensity distribution
+Final full-frame checkpoints:
 
-### 2. Preprocessing & Augmentation
-- Resize to 224×224 pixels
-- Normalize pixel values (0–1)
-- Augmentation: flip, rotate, zoom, brightness shift
-- Class weights to handle imbalance
-- 80/20 train/validation split
+- ResNet50: `models/resnet50/staged_transfer/stage2_finetune/best_model.pt`
+- EfficientNet-B0: `models/efficientnet_b0/staged_transfer/stage2_finetune/best_model.pt`
 
-### 3. Model — ResNet50 + Transfer Learning
-- **Phase 1:** Frozen base, train custom head (lr=1e-3, 15 epochs)
-- **Phase 2:** Fine-tune top 20 layers (lr=1e-5, 20 epochs)
-- Callbacks: EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+## Held-out evaluation
 
-### 4. Evaluation
-- Accuracy, Precision, Recall, F1-Score
-- Confusion Matrix
-- Classification Report per class
-- Emphasis on **Recall** to minimize false negatives
+Use the final Stage-2 checkpoints explicitly. Do not use the default evaluation paths for these completed staged experiments.
 
-### 5. Grad-CAM Explainability
-- Heatmap overlay on MRI showing regions influencing prediction
-- Builds clinical interpretability and trust
-
-### 6. Streamlit Deployment
-- Upload MRI image
-- Get instant prediction with confidence score
-- View Grad-CAM heatmap
-
----
-
-## Setup & Run
-
-### Prerequisites
-```bash
-python 3.10
+```powershell
+python evaluate.py --model resnet50 --checkpoint models/resnet50/staged_transfer/stage2_finetune/best_model.pt
+python evaluate.py --model efficientnet_b0 --checkpoint models/efficientnet_b0/staged_transfer/stage2_finetune/best_model.pt
 ```
 
-### Installation
-```bash
-git clone https://github.com/nish-debug15/brain_tumor_detection.git
-cd brain_tumor_detection
-python -m venv brain_tumor_env
-brain_tumor_env\Scripts\activate
-pip install -r requirements.txt
+Evaluation reports accuracy, macro and per-class precision/recall/F1, one-vs-rest ROC/AUC, a 3 x 3 confusion matrix, and inference time.
+
+## Final full-frame results
+
+The following results are from the single held-out 147-image test set.
+
+| Model | Accuracy | Macro precision | Macro recall | Macro F1 | Inference time |
+|---|---:|---:|---:|---:|---:|
+| ResNet50 | 0.6871 | 0.6390 | 0.5925 | 0.6098 | 98.7 ms/image |
+| EfficientNet-B0 | 0.6667 | 0.5703 | 0.6259 | 0.5767 | 30.7 ms/image |
+
+| Model | Malignant precision | Malignant recall | Malignant F1 |
+|---|---:|---:|---:|
+| ResNet50 | 0.7742 | 0.8276 | 0.8000 |
+| EfficientNet-B0 | 0.7912 | 0.8276 | 0.8090 |
+
+ResNet50 is the selected final model because it achieved stronger held-out accuracy and macro F1 under the final argmax decision rule. Both models achieved the same Malignant recall (0.8276). EfficientNet-B0 had faster measured CPU inference and slightly higher Malignant precision/F1. The dominant error pattern for both models was Benign <-> Malignant confusion.
+
+### Confusion matrices
+
+Rows are true classes and columns are predicted classes in the order Normal, Benign, Malignant.
+
+```text
+ResNet50
+[[ 9,  7,  4],
+ [ 3, 20, 17],
+ [ 2, 13, 72]]
+
+EfficientNet-B0
+[[16,  4,  0],
+ [11, 10, 19],
+ [ 6,  9, 72]]
 ```
 
-### Run Notebooks
-Open in VS Code with Jupyter extension, run in order:
-1. `01_eda.ipynb`
-2. `02_preprocessing.ipynb`
-3. `03_model_training.ipynb` 
-4. `04_evaluation.ipynb`
+EfficientNet-B0 had higher one-vs-rest AUCs in the saved evaluation artifacts, but ROC/AUC describes ranking across thresholds. It does not by itself establish superior final argmax classification performance, which is reflected by the reported accuracy and F1 values.
 
-### Run Streamlit App
-```bash
-cd app
-streamlit run app.py
+## Grad-CAM
+
+Grad-CAM is implemented manually with PyTorch forward and backward hooks in `utils/gradcam.py` and is architecture-agnostic. The resolved target layers are:
+
+- ResNet50: `layer4.2.conv3`
+- EfficientNet-B0: `features.8.0`
+
+Examples were generated from the fixed validation data only. Grad-CAM highlights image regions contributing to a model prediction; it is a model-attribution visualization and does not establish medical causality.
+
+## Streamlit application
+
+Run the application with:
+
+```powershell
+streamlit run app/app.py
 ```
 
----
+The application loads only the final full-frame Stage-2 checkpoints listed above. It supports ResNet50 and EfficientNet-B0, image upload, predicted class, confidence, class probabilities, a configurable manual-review threshold (70% by default), and a Grad-CAM overlay. The interface states: **Academic research prototype — not a clinical diagnostic device.**
 
-## Results
+## Limitations
 
-| Metric | Score |
-|--------|-------|
-| Training Accuracy | 74.67% |
-| Validation Accuracy | 76.82% |
-| Test Accuracy | 74.19% |
-| Precision (Weighted) | 73.55% |
-| Recall (Weighted) | 74.19% |
-| F1 Score (Weighted) | 72.84% |
-
-### Per Class Performance
-
-| Class | Precision | Recall | F1 Score |
-|-------|-----------|--------|----------|
-| Glioma | 81% | 61% | 69% |
-| Meningioma | 55% | 45% | 50% |
-| No Tumor | 76% | 98% | 85% |
-| Pituitary | 80% | 97% | 87% |
-
-> Model: ResNet50 with Transfer Learning. Best performance on No Tumor (98% recall) and Pituitary (97% recall) classes. Meningioma remains the most challenging class due to visual similarity with other tumor types.
-
----
-
-## Key Design Decisions
-
-**Why ResNet50?**
-ResNet50 achieves strong performance on medical imaging tasks through residual/skip connections that solve the vanishing gradient problem, enabling effective training of deep 50-layer networks. We initially tried EfficientNetB0 but it plateaued at 33% accuracy on MRI data — ResNet50 reached 68% by Epoch 2, making it the clear choice for this dataset.
-
-**Why Transfer Learning?**  
-Our dataset of 12,064 images is insufficient to train a CNN from scratch. ResNet50 pre-trained on ImageNet (1.2M images) provides rich feature representations that transfer well to medical imaging.
-
-**Why Grad-CAM?**  
-Medical AI without explainability cannot be trusted clinically. Grad-CAM makes the model's decision process transparent by highlighting the exact MRI regions that influenced the prediction.
-
-**Why emphasize Recall?**  
-A false negative (missing a real tumor) is far more dangerous than a false positive. We optimize recall to minimize the risk of undetected tumors.
-
----
-
-## License
-
-This project is for academic purposes — 4th Semester AIML Project.
+This is an experimental research prototype using a relatively small, class-imbalanced dataset. The held-out test set comes from the same dataset rather than an external cohort. External validation, clinical validation, calibration analysis, reader studies, and statistical comparison were not performed. The results do not support clinical diagnostic claims, and Grad-CAM should not be interpreted as a medical causal explanation.

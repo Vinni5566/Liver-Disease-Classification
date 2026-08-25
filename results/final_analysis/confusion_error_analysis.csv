@@ -1,0 +1,25 @@
+Model,Analysis,True Class,Predicted Class,Count
+ResNet50,Misclassification,Normal,Benign,7
+ResNet50,Misclassification,Normal,Malignant,4
+ResNet50,Misclassification,Benign,Normal,3
+ResNet50,Misclassification,Benign,Malignant,17
+ResNet50,Misclassification,Malignant,Normal,2
+ResNet50,Misclassification,Malignant,Benign,13
+ResNet50,Pairwise error total,Normal <-> Benign,Both directions,10
+ResNet50,Pairwise error total,Normal <-> Malignant,Both directions,6
+ResNet50,Pairwise error total,Benign <-> Malignant,Both directions,30
+ResNet50,Malignant false negative,Malignant,Normal,2
+ResNet50,Malignant false negative,Malignant,Benign,13
+ResNet50,Malignant false negative total,Malignant,non-Malignant,15
+EfficientNet-B0,Misclassification,Normal,Benign,4
+EfficientNet-B0,Misclassification,Normal,Malignant,0
+EfficientNet-B0,Misclassification,Benign,Normal,11
+EfficientNet-B0,Misclassification,Benign,Malignant,19
+EfficientNet-B0,Misclassification,Malignant,Normal,6
+EfficientNet-B0,Misclassification,Malignant,Benign,9
+EfficientNet-B0,Pairwise error total,Normal <-> Benign,Both directions,15
+EfficientNet-B0,Pairwise error total,Normal <-> Malignant,Both directions,6
+EfficientNet-B0,Pairwise error total,Benign <-> Malignant,Both directions,28
+EfficientNet-B0,Malignant false negative,Malignant,Normal,6
+EfficientNet-B0,Malignant false negative,Malignant,Benign,9
+EfficientNet-B0,Malignant false negative total,Malignant,non-Malignant,15

@@ -11,5 +11,31 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local Python environments and notebook/editor caches
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Private Word/paper-production and renderer by-products
+~$*.docx
+paper_build/
+docs/render_*/
+docs/qa_tmp/
+
 .DS_Store
 Thumbs.db
+
+# Trained model checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# Experimental / temporary model runs
+models/resnet50/roi_crop_stage2_restart/
+models/resnet50/*smoke_test*
+models/resnet50/*instability*
+
+# Research paper working files
+docs/
+results/final_paper/

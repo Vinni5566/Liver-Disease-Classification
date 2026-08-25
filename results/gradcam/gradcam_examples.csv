@@ -1,0 +1,13 @@
+model,image_path,true_class,predicted_class,confidence,correct,error_type,target_class,target_layer
+resnet50,dataset/train/Normal/76.jpg,Normal,Normal,0.8886198401451111,true,correct,Normal,layer4.2.conv3
+resnet50,dataset/train/Benign/182.jpg,Benign,Benign,0.7349793314933777,true,correct,Benign,layer4.2.conv3
+resnet50,dataset/train/Malignant/89.jpg,Malignant,Malignant,0.9820122718811035,true,correct,Malignant,layer4.2.conv3
+resnet50,dataset/train/Benign/35.jpg,Benign,Malignant,0.8544350266456604,false,benign_to_malignant,Malignant,layer4.2.conv3
+resnet50,dataset/train/Malignant/386.jpg,Malignant,Benign,0.6773657202720642,false,malignant_to_benign,Benign,layer4.2.conv3
+resnet50,dataset/train/Normal/49.jpg,Normal,Malignant,0.5883947610855103,false,normal_to_malignant,Malignant,layer4.2.conv3
+efficientnet_b0,dataset/train/Normal/30.jpg,Normal,Normal,0.8471772074699402,true,correct,Normal,features.8.0
+efficientnet_b0,dataset/train/Benign/159.jpg,Benign,Benign,0.5650015473365784,true,correct,Benign,features.8.0
+efficientnet_b0,dataset/train/Malignant/6.jpg,Malignant,Malignant,0.964150071144104,true,correct,Malignant,features.8.0
+efficientnet_b0,dataset/train/Benign/4.jpg,Benign,Malignant,0.8745142221450806,false,benign_to_malignant,Malignant,features.8.0
+efficientnet_b0,dataset/train/Malignant/7.jpg,Malignant,Benign,0.578423023223877,false,malignant_to_benign,Benign,features.8.0
+efficientnet_b0,dataset/train/Normal/49.jpg,Normal,Malignant,0.3799152672290802,false,normal_to_malignant,Malignant,features.8.0
